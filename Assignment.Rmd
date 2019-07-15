@@ -37,29 +37,45 @@ ggpairs(dat)
 
 # Separate out test vs train
 ```{r}
-# ????
-# Do we actually need this any more????
-# ????
+dat_index = createDataPartition(dat$diabetes, p = .75, list = FALSE)
+dat_train = dat[dat_index,]
+dat_test = dat[-dat_index,]
 ```
 
 
 # Train your model
 
 # Naive Bayes
+
+## First try using defaults
 ```{r, warning=FALSE}
 tctrl = trainControl(method = 'cv',
                      number = 10,
                      savePredictions = TRUE,
-                     p = 0.8, # training percentage!
                      classProbs = TRUE)
 
-mod_nb = train(dat %>% select(-diabetes), 
-                dat$diabetes, 
+mod_nb = train(dat_train %>% select(-diabetes), 
+                dat_train$diabetes, 
                 method = 'nb',
                 trControl=tctrl)
 
-confusionMatrix(table(mod_nb$pred$pred, mod_nb$pred$obs))
+pred_nb = predict(mod_nb, dat_test, type = 'prob')
 ```
+
+```{r}
+mod_nb
+```
+
+# Plot the ROC 
+```{r, warning=FALSE}
+df = dat_test %>% bind_cols(pred_nb) 
+rocplot_nb <- ggplot(df, aes(m = pos, d = diabetes)) + 
+  geom_roc() + 
+  style_roc(theme = theme_grey) + 
+  ggtitle('Naive Bayes')
+rocplot_nb
+```
+
 
 
 # Logistic Regression
@@ -70,13 +86,23 @@ tctrl = trainControl(method = 'cv',
                      p = 0.8,
                      classProbs = TRUE)
 
-mod_logreg = train(dat %>% select(-diabetes), 
-                dat$diabetes, 
+mod_logreg = train(dat_train %>% select(-diabetes), 
+                dat_train$diabetes, 
                 method="glm", 
                 family="binomial",
                 trControl=tctrl)
 
-confusionMatrix(table(mod_logreg$pred$pred, mod_logreg$pred$obs))
+pred_logreg = predict(mod_logreg, dat_test, type = 'prob')
+```
+
+# Plot the ROC 
+```{r, warning=FALSE}
+df = dat_test %>% bind_cols(pred_logreg)
+rocplot_logreg <- ggplot(df, aes(m = pos, d = diabetes)) + 
+  geom_roc() + 
+  style_roc(theme = theme_grey) + 
+  ggtitle('Logistic Regression')
+rocplot_logreg
 ```
 
 
@@ -88,13 +114,26 @@ tctrl = trainControl(method = 'cv',
                      p = 0.8,
                      classProbs = TRUE)
 
-mod_knn = train(dat %>% select(-diabetes), 
-                dat$diabetes, 
+mod_knn = train(dat_train %>% select(-diabetes), 
+                dat_train$diabetes, 
                 method="knn", 
                 trControl=tctrl)
 
-confusionMatrix(table(mod_knn$pred$pred, mod_knn$pred$obs))
+pred_knn = predict(mod_knn, dat_test, type = 'prob')
 ```
+
+
+# Plot the ROC 
+```{r, warning=FALSE}
+df = dat_test %>% bind_cols(pred_knn) 
+rocplot_knn <- ggplot(df, aes(m = pos, d = diabetes)) + 
+  geom_roc() + 
+  style_roc(theme = theme_grey) + 
+  ggtitle('K-Nearest Neighbors')
+rocplot_knn
+```
+
+
 
 # Combine all models together
 ```{r}
@@ -105,6 +144,12 @@ summary(results)
 
 ```{r}
 bwplot(results)
+```
+
+
+
+```{r}
+
 ```
 
 
