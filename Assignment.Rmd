@@ -1,0 +1,111 @@
+---
+title: "Assignment"
+author: "Scott Stoltzman"
+date: "7/15/2019"
+output: 
+  html_document:
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library("mlbench")
+library('GGally')
+library("tidyverse")
+library('caret')
+library('plotROC')
+set.seed(123)
+
+data("PimaIndiansDiabetes") #loads dataframe for PimaIndiansDiabetes dataset
+```
+
+```{r}
+dat = as.data.frame(PimaIndiansDiabetes) # MUST do for caret to work properly
+head(dat)
+```
+
+
+# What are we going to try to predict?
+Can we predict `pos` or `neg` outcome for diabetes?
+
+
+```{r, warning=FALSE, message=FALSE}
+# WARNING: takes a little while to process
+ggpairs(dat)
+```
+
+
+# Separate out test vs train
+```{r}
+# ????
+# Do we actually need this any more????
+# ????
+```
+
+
+# Train your model
+
+# Naive Bayes
+```{r, warning=FALSE}
+tctrl = trainControl(method = 'cv',
+                     number = 10,
+                     savePredictions = TRUE,
+                     p = 0.8, # training percentage!
+                     classProbs = TRUE)
+
+mod_nb = train(dat %>% select(-diabetes), 
+                dat$diabetes, 
+                method = 'nb',
+                trControl=tctrl)
+
+confusionMatrix(table(mod_nb$pred$pred, mod_nb$pred$obs))
+```
+
+
+# Logistic Regression
+```{r}
+tctrl = trainControl(method = 'cv',
+                     number = 10,
+                     savePredictions = TRUE,
+                     p = 0.8,
+                     classProbs = TRUE)
+
+mod_logreg = train(dat %>% select(-diabetes), 
+                dat$diabetes, 
+                method="glm", 
+                family="binomial",
+                trControl=tctrl)
+
+confusionMatrix(table(mod_logreg$pred$pred, mod_logreg$pred$obs))
+```
+
+
+# KNN
+```{r}
+tctrl = trainControl(method = 'cv',
+                     number = 10,
+                     savePredictions = TRUE,
+                     p = 0.8,
+                     classProbs = TRUE)
+
+mod_knn = train(dat %>% select(-diabetes), 
+                dat$diabetes, 
+                method="knn", 
+                trControl=tctrl)
+
+confusionMatrix(table(mod_knn$pred$pred, mod_knn$pred$obs))
+```
+
+# Combine all models together
+```{r}
+results = resamples(list(mod_logreg, mod_nb, mod_knn))
+summary(results)
+```
+
+
+```{r}
+bwplot(results)
+```
+
+
+
