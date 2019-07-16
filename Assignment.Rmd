@@ -37,7 +37,9 @@ ggpairs(dat)
 
 # Separate out test vs train
 ```{r}
-dat_index = createDataPartition(dat$diabetes, p = .75, list = FALSE)
+training_split = 0.75 #50% data for train, 50% for test
+smp_size = floor(training_split * nrow(dat))
+dat_index = sample(seq_len(nrow(dat)), size = smp_size)
 dat_train = dat[dat_index,]
 dat_test = dat[-dat_index,]
 ```
@@ -67,6 +69,7 @@ mod_nb
 ```
 
 # Plot the ROC 
+write a function for making these plots?
 ```{r, warning=FALSE}
 df = dat_test %>% bind_cols(pred_nb) 
 rocplot_nb <- ggplot(df, aes(m = pos, d = diabetes)) + 
@@ -137,7 +140,7 @@ rocplot_knn
 
 # Combine all models together
 ```{r}
-results = resamples(list(mod_logreg, mod_nb, mod_knn))
+results = resamples(list(mod_nb, mod_logreg, mod_knn))
 summary(results)
 ```
 
