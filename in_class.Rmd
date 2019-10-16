@@ -1,0 +1,75 @@
+---
+title: "Assignment"
+author: "Scott Stoltzman"
+date: "7/15/2019"
+output: 
+  html_document:
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library('corrplot') # install.packages('corrplot') --> very handy for correlations of large dataframe
+library('mlbench') # install.packages('mlbench')
+library("tidyverse")
+library('caret')
+set.seed(123)
+
+data("PimaIndiansDiabetes") 
+```
+Data: <https://rdrr.io/cran/mlbench/man/PimaIndiansDiabetes.html>
+Data has no `NA` - assume "clean" data for this exercise.
+
+```{r}
+dat = PimaIndiansDiabetes %>% 
+  as_tibble() %>%
+  rename(Class = diabetes) %>%
+  mutate(Class = as.factor(Class))
+head(dat)
+```
+
+
+# What are we going to try to predict?
+Can we predict `pos` or `neg` outcome for diabetes (renamed to `Class`)?
+
+Perform a couple of basic EDA steps.
+
+Start by showing the base rate.
+```{r}
+
+```
+
+Visualize the correlation of all variables using the `corrplot.mixed()` function on the `corrplot_dat` data. <https://cran.r-project.org/web/packages/corrplot/vignettes/corrplot-intro.html>
+```{r}
+corrplot_dat = cor(dat %>% select(-Class))
+
+```
+
+Complete 2 more EDA steps you find interesting
+```{r}
+# Step 1
+```
+
+
+```{r}
+# Step 2
+```
+
+
+Separate out test vs train --> assume training on 75% of data
+```{r}
+
+```
+
+
+Complete any resampling
+```{r}
+
+```
+
+
+Train two types of classification models, describe what the models indicate, and compare results
+```{r}
+
+```
+
