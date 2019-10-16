@@ -1,0 +1,161 @@
+---
+title: "Assignment"
+author: "Scott Stoltzman"
+date: "7/15/2019"
+output: 
+  html_document:
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library('corrplot') # install.packages('corrplot') --> very handy for correlations of large dataframe
+library('mlbench') # install.packages('mlbench')
+library("tidyverse")
+library('caret')
+set.seed(123)
+
+data("PimaIndiansDiabetes") 
+```
+Data: <https://rdrr.io/cran/mlbench/man/PimaIndiansDiabetes.html>
+Data has no `NA` - assume "clean" data for this exercise.
+
+```{r}
+dat = PimaIndiansDiabetes %>% 
+  as_tibble() %>%
+  rename(Class = diabetes) %>%
+  mutate(Class = as.factor(Class))
+head(dat)
+```
+
+
+# What are we going to try to predict?
+Can we predict `pos` or `neg` outcome for diabetes (renamed to `Class`)?
+
+Perform a couple of basic EDA steps.
+
+Start by showing the base rate.
+```{r}
+dat %>%
+  group_by(Class) %>%
+  count() %>%
+  ggplot(aes(x = Class, y = n)) + 
+  geom_col()
+```
+
+Visualize the correlation of all variables using the `corrplot.mixed()` function <https://cran.r-project.org/web/packages/corrplot/vignettes/corrplot-intro.html>
+```{r}
+corrplot_dat = cor(dat %>% select(-Class))
+corrplot.mixed(corrplot_dat)
+```
+
+Complete 2 more EDA steps you find interesting
+```{r}
+# Step 1
+```
+
+
+```{r}
+# Step 2
+```
+
+
+Separate out test vs train --> assume training on 75% of data
+```{r}
+dat_id = dat %>%
+  mutate(id = row_number())
+
+training_split = 0.75 
+
+dat_train = dat_id %>%
+  sample_frac(0.75)
+
+dat_test = dat_id %>%
+  anti_join(dat_train, by = 'id') %>%
+  select(-id)
+
+dat_train = dat_train %>% select(-id)
+
+```
+
+
+Complete any resampling
+```{r}
+dat_train_up = upSample(dat_train %>% select(-Class),
+                        dat_train %>% select(Class) %>% pull())
+```
+
+
+Train two types of classification models, describe what the models indicate, and compare results
+```{r, warning=FALSE}
+train_control = trainControl(method = 'cv')
+
+mod_rf = train(dat_train_up %>% select(-Class), 
+                dat_train_up$Class, 
+                method = 'ranger',
+                importance = "impurity",
+                trControl = train_control)
+
+pred_rf = predict(mod_rf, dat_test)
+
+mod_rf
+```
+
+```{r}
+confusionMatrix(pred_rf, dat_test %>% select(Class) %>% pull())
+```
+
+
+```{r}
+mod_rf$finalModel
+```
+
+
+```{r}
+caret::varImp(mod_rf)
+```
+
+
+# Logistic Regression
+```{r}
+train_control = trainControl(method = 'cv',
+                     number = 10)
+
+mod_logreg = train(dat_train_up %>% select(-Class), 
+                dat_train_up$Class, 
+                method = "glm", 
+                family = "binomial",
+                trControl = train_control)
+
+pred_logreg = predict(mod_logreg, dat_test)
+
+mod_logreg
+```
+
+```{r}
+confusionMatrix(pred_logreg, dat_test %>% select(Class) %>% pull())
+```
+
+Describe what model you would use and why. Consider the accuracy, true positive rates, false positive rates, etc.
+
+
+
+What is a grid search? How can we use it with our Random Forest model?
+```{r}
+train_control = trainControl(method="cv")
+
+tune_grid = expand.grid(
+  .mtry = 1:round(sqrt(ncol(dat_train_up))),
+  .splitrule = "gini",
+  .min.node.size = c(10, 20)
+)
+
+mod_rf_grid = train(Class ~ ., 
+                    data = dat_train_up, 
+                    method = "ranger", 
+                    tuneGrid = tune_grid, 
+                    trControl = train_control)
+
+mod_rf_grid
+```
+
