@@ -9,7 +9,7 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-library('corrplot') # install.packages('corrplot') --> very handy for correlations of large dataframe
+library('corrplot') # install.packages('corrplot') #--> very handy for correlations of large dataframe
 library('mlbench') # install.packages('mlbench')
 library("tidyverse")
 library('caret')
@@ -36,40 +36,131 @@ Perform a couple of basic EDA steps.
 
 Start by showing the base rate.
 ```{r}
-
+dat  %>%
+  group_by(Class) %>%
+  summarize(n = n()) %>%
+  mutate(n_pct  = n / nrow(dat))
 ```
 
 Visualize the correlation of all variables using the `corrplot.mixed()` function on the `corrplot_dat` data. <https://cran.r-project.org/web/packages/corrplot/vignettes/corrplot-intro.html>
 ```{r}
 corrplot_dat = cor(dat %>% select(-Class))
-
+corrplot.mixed(corrplot_dat)
 ```
 
 Complete 2 more EDA steps you find interesting
 ```{r}
 # Step 1
+dat %>%
+  ggplot(aes(x=age, y=pregnant)) +
+  geom_jitter() +
+  geom_smooth(method="lm")
+
+# Linear regression not a good choice cause variance not around zero
 ```
 
 
 ```{r}
 # Step 2
+dat %>%
+  ggplot(aes(x=triceps, y=insulin, col=Class)) +
+  geom_jitter()
+
+dat %>%
+  ggplot(aes(x=triceps, y=insulin, col=Class)) +
+  geom_jitter() +
+  geom_smooth(method="lm")
+
+# Some other ways to sample various relationships
+dat %>%
+  ggplot(aes(x=Class, y=triceps)) +
+  geom_boxplot()
+
+dat %>%
+  ggplot(aes(x=Class, y=pedigree)) +
+  geom_boxplot()
+
+dat %>%
+  ggplot(aes(x=mass)) +
+  geom_density()
 ```
 
 
 Separate out test vs train --> assume training on 75% of data
 ```{r}
+# Add id for spliting
+dat <- dat %>% mutate(id = row_number())
 
+sample_volume = round(0.7 * nrow(dat))
+dat_train = dat %>%
+  sample_n(sample_volume)
+dat_test = dat %>%
+  anti_join(dat_train, by = 'id')
+dat_train = dat_train %>% select(-id)
+dat_test = dat_test %>% select(-id)
 ```
 
 
 Complete any resampling
 ```{r}
-
+dat_train_up <- upSample(x = dat_train[, -ncol(dat_train)],
+                         y = dat_train$Class)
+dat_train_up %>%
+  group_by(Class) %>%
+  count()
 ```
 
 
 Train two types of classification models, describe what the models indicate, and compare results
 ```{r}
+train_control_glm = trainControl(
+    method = "cv", number = 10
+  )
+model_glm = train(
+  Class ~ ., 
+  data = dat_train_up,
+  method = "glm",
+  family = "binomial",
+  trControl = train_control_glm
+)
+model_glm
+```
+```{r}
+summary(model_glm)
+```
 
+```{r}
+train_control_ranger= trainControl(
+  method = "cv" #, number = 5
+)
+
+model_ranger = train(
+  Class ~ ., 
+  data = dat_train_up,
+  method = "ranger",
+  importance = "impurity",
+  trControl = train_control_ranger
+)
+model_ranger
+```
+
+```{r}
+model_ranger$finalModel
+```
+```{r}
+plot(caret::varImp(model_ranger))
+plot(caret::varImp(model_glm))
+```
+
+```{r}
+predictions = predict(model_glm, newdata = dat_test, type = 'raw')
+actuals = dat_test$Class
+confusionMatrix(predictions, actuals)
+```
+
+```{r}
+predictions = predict(model_ranger, newdata = dat_test, type = 'raw')
+actuals = dat_test$Class
+confusionMatrix(predictions, actuals)
 ```
 
